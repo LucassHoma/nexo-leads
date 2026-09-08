@@ -1,6 +1,7 @@
 window.NexoApp = (() => {
   const STORAGE_SAVED = "nexo-saved-leads";
   const STORAGE_SETTINGS = "nexo-settings";
+  const STORAGE_SIDEBAR = "nexo-sidebar-collapsed";
 
   const els = {
     form: document.getElementById("search-form"),
@@ -16,9 +17,6 @@ window.NexoApp = (() => {
     drawer: document.getElementById("drawer"),
     modal: document.getElementById("settings-modal"),
     googleKey: document.getElementById("google-key"),
-    statTotal: document.getElementById("stat-total"),
-    statNosite: document.getElementById("stat-nosite"),
-    statAvg: document.getElementById("stat-avg"),
     viewTitle: document.getElementById("view-title"),
     progressWrap: document.getElementById("search-progress"),
     progressLabel: document.getElementById("progress-label"),
@@ -162,20 +160,6 @@ window.NexoApp = (() => {
     return list;
   }
 
-  function stats(leads) {
-    if (!leads.length) {
-      els.statTotal.textContent = "0";
-      els.statNosite.textContent = "0";
-      els.statAvg.textContent = "—";
-      return;
-    }
-    const nosite = leads.filter((l) => !l.website).length;
-    const avg = Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length);
-    els.statTotal.textContent = String(leads.length);
-    els.statNosite.textContent = String(nosite);
-    els.statAvg.textContent = String(avg);
-  }
-
   function formatHours(hours) {
     if (!hours) return "";
     if (isClosingSoon(hours) && hours.closesAt) {
@@ -293,7 +277,6 @@ window.NexoApp = (() => {
 
   function renderCurrent() {
     const visible = applyFilters(currentLeads);
-    stats(visible);
     renderList(
       els.results,
       visible,
@@ -576,6 +559,48 @@ window.NexoApp = (() => {
     });
     els.viewTitle.textContent = titles[name];
     if (name === "saved") renderKanban();
+    if (isMobileLayout() && !document.getElementById("app").classList.contains("is-sidebar-collapsed")) {
+      setSidebarCollapsed(true);
+    }
+  }
+
+  function isMobileLayout() {
+    return window.matchMedia("(max-width: 980px)").matches;
+  }
+
+  function setSidebarCollapsed(collapsed) {
+    const app = document.getElementById("app");
+    const toggle = document.getElementById("sidebar-toggle");
+    const backdrop = document.getElementById("sidebar-backdrop");
+    if (!app || !toggle) return;
+    app.classList.toggle("is-sidebar-collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute("aria-label", collapsed ? "Expandir menu" : "Recolher menu");
+    if (backdrop) {
+      backdrop.hidden = collapsed || !isMobileLayout();
+    }
+    localStorage.setItem(STORAGE_SIDEBAR, collapsed ? "1" : "0");
+  }
+
+  function initSidebar() {
+    const saved = localStorage.getItem(STORAGE_SIDEBAR);
+    const collapsed = saved == null ? isMobileLayout() : saved === "1";
+    setSidebarCollapsed(collapsed);
+
+    document.getElementById("sidebar-toggle")?.addEventListener("click", () => {
+      const app = document.getElementById("app");
+      setSidebarCollapsed(!app.classList.contains("is-sidebar-collapsed"));
+    });
+    document.getElementById("sidebar-backdrop")?.addEventListener("click", () => {
+      setSidebarCollapsed(true);
+    });
+    window.matchMedia("(max-width: 980px)").addEventListener("change", (event) => {
+      if (event.matches) setSidebarCollapsed(true);
+      else {
+        const backdrop = document.getElementById("sidebar-backdrop");
+        if (backdrop) backdrop.hidden = true;
+      }
+    });
   }
 
   function syncBatchUi() {
@@ -759,6 +784,7 @@ window.NexoApp = (() => {
       if (event.key !== "Escape") return;
       closeDrawer();
       closeSettings();
+      if (isMobileLayout()) setSidebarCollapsed(true);
     });
 
     els.results.addEventListener("keydown", (event) => {
@@ -808,6 +834,7 @@ window.NexoApp = (() => {
     });
     renderKanban();
     NexoSuggesters.init();
+    initSidebar();
     bind();
 
     const source = settings.source || NexoConfig.defaultSource;

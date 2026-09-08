@@ -25,29 +25,35 @@
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <div>
-            <strong>NEXO</strong>
-            <span>Buscador de leads</span>
+    <div class="app" id="app">
+      <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-top">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <div class="brand-copy">
+              <strong>NEXO</strong>
+              <span>Buscador de leads</span>
+            </div>
           </div>
+          <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Recolher menu" aria-controls="sidebar" aria-expanded="true">
+            <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+          </button>
         </div>
 
         <nav class="side-nav" aria-label="Seções">
-          <button class="nav-btn is-active" data-view="search" type="button">
+          <button class="nav-btn is-active" data-view="search" type="button" title="Radar">
             <i class="fa-solid fa-bullseye nav-icon" aria-hidden="true"></i>
-            Radar
+            <span class="nav-label">Radar</span>
           </button>
-          <button class="nav-btn" data-view="saved" type="button">
+          <button class="nav-btn" data-view="saved" type="button" title="Pipeline">
             <i class="fa-solid fa-table-columns nav-icon" aria-hidden="true"></i>
-            Pipeline
+            <span class="nav-label">Pipeline</span>
             <em id="saved-count">0</em>
           </button>
-          <button class="nav-btn" data-view="criteria" type="button">
+          <button class="nav-btn" data-view="criteria" type="button" title="Critérios">
             <i class="fa-solid fa-sliders nav-icon" aria-hidden="true"></i>
-            Critérios
+            <span class="nav-label">Critérios</span>
           </button>
         </nav>
 
@@ -78,32 +84,18 @@
         </section>
 
         <div class="sidebar-foot">
-          <button class="ghost" id="open-settings" type="button">
+          <button class="ghost" id="open-settings" type="button" title="Fonte de dados">
             <i class="fa-solid fa-database" aria-hidden="true"></i>
-            Fonte de dados
+            <span class="nav-label">Fonte de dados</span>
           </button>
         </div>
       </aside>
 
       <main class="main">
         <header class="topbar">
-          <div>
+          <div class="topbar-title">
             <p class="eyebrow">Prospecção local</p>
             <h1 id="view-title">Radar de estabelecimentos</h1>
-          </div>
-          <div class="top-stats" id="top-stats">
-            <div>
-              <span><i class="fa-solid fa-layer-group stat-icon" aria-hidden="true"></i> Leads</span>
-              <strong id="stat-total">—</strong>
-            </div>
-            <div>
-              <span><i class="fa-solid fa-globe stat-icon" aria-hidden="true"></i> Sem site</span>
-              <strong id="stat-nosite">—</strong>
-            </div>
-            <div>
-              <span><i class="fa-solid fa-chart-line stat-icon" aria-hidden="true"></i> Score médio</span>
-              <strong id="stat-avg">—</strong>
-            </div>
           </div>
         </header>
 
