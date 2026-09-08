@@ -141,23 +141,29 @@
                 <input id="f-batch" type="checkbox" />
                 <span>Busca em lote (vários nichos)</span>
               </label>
-              <div class="batch-picks" id="batch-picks" hidden>
-                <button class="chip chip-sm" type="button" data-batch-niche="Padaria">Padaria</button>
-                <button class="chip chip-sm" type="button" data-batch-niche="Barbearia">Barbearia</button>
-                <button class="chip chip-sm" type="button" data-batch-niche="Restaurante">Restaurante</button>
-                <button class="chip chip-sm" type="button" data-batch-niche="Cafeteria">Cafeteria</button>
-                <button class="chip chip-sm" type="button" data-batch-niche="Clínica odontológica">Odonto</button>
-                <button class="chip chip-sm" type="button" data-batch-niche="Academia">Academia</button>
+              <div id="batch-chips-wrap" hidden>
+                <p class="chips-label">Selecione vários nichos</p>
+                <div class="batch-picks" id="batch-picks">
+                  <button class="chip chip-sm" type="button" data-batch-niche="Padaria">Padaria</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Barbearia">Barbearia</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Restaurante">Restaurante</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Cafeteria">Cafeteria</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Clínica odontológica">Odonto</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Academia">Academia</button>
+                </div>
               </div>
             </div>
 
-            <div class="niche-chips" id="niche-chips" aria-label="Nichos rápidos">
-              <button class="chip" type="button" data-niche="Padaria">Padaria</button>
-              <button class="chip" type="button" data-niche="Barbearia">Barbearia</button>
-              <button class="chip" type="button" data-niche="Restaurante">Restaurante</button>
-              <button class="chip" type="button" data-niche="Clínica odontológica">Odonto</button>
-              <button class="chip" type="button" data-niche="Oficina mecânica">Oficina</button>
-              <button class="chip" type="button" data-niche="Academia">Academia</button>
+            <div id="single-chips-wrap">
+              <p class="chips-label">Nicho rápido</p>
+              <div class="niche-chips" id="niche-chips" aria-label="Nichos rápidos">
+                <button class="chip" type="button" data-niche="Padaria">Padaria</button>
+                <button class="chip" type="button" data-niche="Barbearia">Barbearia</button>
+                <button class="chip" type="button" data-niche="Restaurante">Restaurante</button>
+                <button class="chip" type="button" data-niche="Clínica odontológica">Odonto</button>
+                <button class="chip" type="button" data-niche="Oficina mecânica">Oficina</button>
+                <button class="chip" type="button" data-niche="Academia">Academia</button>
+              </div>
             </div>
 
             <details class="filter-panel" open>

@@ -466,6 +466,26 @@ h1 {
   margin-top: 14px;
 }
 
+.niche-chips[hidden],
+.batch-picks[hidden],
+#batch-chips-wrap[hidden],
+#single-chips-wrap[hidden] {
+  display: none !important;
+}
+
+.chips-label {
+  margin: 0 0 2px;
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chips-label[hidden] {
+  display: none !important;
+}
+
 .batch-row {
   display: flex;
   flex-direction: column;
@@ -1763,8 +1783,20 @@ h1 {
     margin-top: 4px;
   }
 
-  .niche-chips {
-    margin-top: 12px;
+  .niche-chips[hidden],
+  .batch-picks[hidden],
+  #batch-chips-wrap[hidden],
+  #single-chips-wrap[hidden] {
+    display: none !important;
+  }
+
+  #single-chips-wrap,
+  #batch-chips-wrap {
+    margin-top: 4px;
+  }
+
+  .chips-label {
+    margin-bottom: 8px;
   }
 
   .chip,

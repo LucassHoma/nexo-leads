@@ -605,14 +605,26 @@ window.NexoApp = (() => {
 
   function syncBatchUi() {
     const on = document.getElementById("f-batch").checked;
-    document.getElementById("batch-picks").hidden = !on;
+    const batchWrap = document.getElementById("batch-chips-wrap");
+    const singleWrap = document.getElementById("single-chips-wrap");
+    if (batchWrap) batchWrap.hidden = !on;
+    if (singleWrap) singleWrap.hidden = on;
     document.getElementById("niche-hint").textContent = on
       ? "— selecione abaixo ou separe por vírgula"
       : "";
     document.getElementById("q-niche").placeholder = on
       ? "Ex.: Padaria, Barbearia, Restaurante"
       : "Ex.: padaria, clínica, oficina";
-    document.getElementById("niche-chips").hidden = on;
+
+    if (on) {
+      document.querySelectorAll("#niche-chips .chip.is-active").forEach((el) => el.classList.remove("is-active"));
+    } else {
+      document.querySelectorAll("#batch-picks .chip.is-active").forEach((el) => el.classList.remove("is-active"));
+      const value = NexoData.normalize(document.getElementById("q-niche").value);
+      document.querySelectorAll("#niche-chips .chip").forEach((el) => {
+        el.classList.toggle("is-active", NexoData.normalize(el.dataset.niche) === value);
+      });
+    }
   }
 
   function bindKanban() {
