@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEXO — Buscador de leads locais</title>
+    <meta
+      name="description"
+      content="Encontre estabelecimentos no mapa sem site próprio. Pontuação por avaliações, estrelas e localização."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23080809' width='32' height='32'/><rect fill='%23ff0000' x='6' y='6' width='8' height='20'/></svg>" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <strong>NEXO</strong>
+            <span>Buscador de leads</span>
+          </div>
+        </div>
+
+        <nav class="side-nav" aria-label="Seções">
+          <button class="nav-btn is-active" data-view="search" type="button">
+            <i class="fa-solid fa-bullseye nav-icon" aria-hidden="true"></i>
+            Radar
+          </button>
+          <button class="nav-btn" data-view="saved" type="button">
+            <i class="fa-solid fa-table-columns nav-icon" aria-hidden="true"></i>
+            Pipeline
+            <em id="saved-count">0</em>
+          </button>
+          <button class="nav-btn" data-view="criteria" type="button">
+            <i class="fa-solid fa-sliders nav-icon" aria-hidden="true"></i>
+            Critérios
+          </button>
+        </nav>
+
+        <section class="weights" aria-labelledby="weights-title">
+          <h2 id="weights-title">Pesos da pontuação</h2>
+          <p class="hint">Ajuste o que importa na sua prospecção. O total é normalizado.</p>
+
+          <label class="weight">
+            <span>Sem site <b id="w-site-val">35</b></span>
+            <input id="w-site" type="range" min="0" max="50" value="35" />
+          </label>
+          <label class="weight">
+            <span>Estrelas <b id="w-stars-val">25</b></span>
+            <input id="w-stars" type="range" min="0" max="50" value="25" />
+          </label>
+          <label class="weight">
+            <span>Avaliações <b id="w-reviews-val">20</b></span>
+            <input id="w-reviews" type="range" min="0" max="50" value="20" />
+          </label>
+          <label class="weight">
+            <span>Localização <b id="w-place-val">15</b></span>
+            <input id="w-place" type="range" min="0" max="50" value="15" />
+          </label>
+          <label class="weight">
+            <span>Telefone <b id="w-phone-val">5</b></span>
+            <input id="w-phone" type="range" min="0" max="30" value="5" />
+          </label>
+        </section>
+
+        <div class="sidebar-foot">
+          <button class="ghost" id="open-settings" type="button">
+            <i class="fa-solid fa-database" aria-hidden="true"></i>
+            Fonte de dados
+          </button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Prospecção local</p>
+            <h1 id="view-title">Radar de estabelecimentos</h1>
+          </div>
+          <div class="top-stats" id="top-stats">
+            <div>
+              <span><i class="fa-solid fa-layer-group stat-icon" aria-hidden="true"></i> Leads</span>
+              <strong id="stat-total">—</strong>
+            </div>
+            <div>
+              <span><i class="fa-solid fa-globe stat-icon" aria-hidden="true"></i> Sem site</span>
+              <strong id="stat-nosite">—</strong>
+            </div>
+            <div>
+              <span><i class="fa-solid fa-chart-line stat-icon" aria-hidden="true"></i> Score médio</span>
+              <strong id="stat-avg">—</strong>
+            </div>
+          </div>
+        </header>
+
+        <section class="view is-visible" id="view-search" aria-label="Busca">
+          <form class="search-panel" id="search-form">
+            <div class="search-grid">
+              <label class="field field-grow">
+                <span>Nicho / segmento <small id="niche-hint"></small></span>
+                <input
+                  id="q-niche"
+                  name="niche"
+                  placeholder="Ex.: padaria, clínica, oficina"
+                  value="Padaria"
+                  required
+                />
+              </label>
+
+              <label class="field field-grow">
+                <span>Cidade, bairro ou endereço</span>
+                <input
+                  id="q-place"
+                  name="place"
+                  placeholder="Ex.: Americana, São Paulo"
+                  value="Americana, São Paulo"
+                  required
+                />
+              </label>
+
+              <label class="field">
+                <span>Raio</span>
+                <select id="q-radius" name="radius">
+                  <option value="1000">1 km</option>
+                  <option value="2500" selected>2,5 km</option>
+                  <option value="5000">5 km</option>
+                  <option value="10000">10 km</option>
+                  <option value="50000">50 km</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="batch-row">
+              <label class="check">
+                <input id="f-batch" type="checkbox" />
+                <span>Busca em lote (vários nichos)</span>
+              </label>
+              <div class="batch-picks" id="batch-picks" hidden>
+                <button class="chip chip-sm" type="button" data-batch-niche="Padaria">Padaria</button>
+                <button class="chip chip-sm" type="button" data-batch-niche="Barbearia">Barbearia</button>
+                <button class="chip chip-sm" type="button" data-batch-niche="Restaurante">Restaurante</button>
+                <button class="chip chip-sm" type="button" data-batch-niche="Cafeteria">Cafeteria</button>
+                <button class="chip chip-sm" type="button" data-batch-niche="Clínica odontológica">Odonto</button>
+                <button class="chip chip-sm" type="button" data-batch-niche="Academia">Academia</button>
+              </div>
+            </div>
+
+            <div class="niche-chips" id="niche-chips" aria-label="Nichos rápidos">
+              <button class="chip" type="button" data-niche="Padaria">Padaria</button>
+              <button class="chip" type="button" data-niche="Barbearia">Barbearia</button>
+              <button class="chip" type="button" data-niche="Restaurante">Restaurante</button>
+              <button class="chip" type="button" data-niche="Clínica odontológica">Odonto</button>
+              <button class="chip" type="button" data-niche="Oficina mecânica">Oficina</button>
+              <button class="chip" type="button" data-niche="Academia">Academia</button>
+            </div>
+
+            <details class="filter-panel" open>
+              <summary><i class="fa-solid fa-filter" aria-hidden="true"></i> Filtros e ordenação</summary>
+              <div class="filters">
+                <label class="check">
+                  <input id="f-nosite" type="checkbox" checked />
+                  <span>Priorizar sem site</span>
+                </label>
+                <label class="check">
+                  <input id="f-hide-site" type="checkbox" checked />
+                  <span>Ocultar quem já tem site</span>
+                </label>
+                <label class="mini">
+                  Mín. estrelas
+                  <select id="f-stars">
+                    <option value="0">Qualquer</option>
+                    <option value="3">3.0+</option>
+                    <option value="3.5">3.5+</option>
+                    <option value="4" selected>4.0+</option>
+                    <option value="4.5">4.5+</option>
+                  </select>
+                </label>
+                <label class="mini">
+                  Mín. avaliações
+                  <select id="f-reviews">
+                    <option value="0">Qualquer</option>
+                    <option value="10">10+</option>
+                    <option value="30" selected>30+</option>
+                    <option value="80">80+</option>
+                    <option value="200">200+</option>
+                  </select>
+                </label>
+                <label class="mini">
+                  Ordenar
+                  <select id="f-sort">
+                    <option value="score">Maior score</option>
+                    <option value="stars">Mais estrelas</option>
+                    <option value="reviews">Mais avaliações</option>
+                    <option value="distance">Mais perto</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+
+            <div class="search-actions">
+              <button class="primary" type="submit" id="search-btn">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span class="btn-label">Buscar leads</span>
+              </button>
+              <button class="ghost" type="button" id="export-btn" disabled>
+                <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+                Exportar CSV
+              </button>
+              <p class="source-pill" id="source-pill"><i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> <span id="source-pill-text">Google Places</span></p>
+            </div>
+          </form>
+
+          <div class="results-head">
+            <p id="results-meta">Defina nicho e lugar para varrer o mapa.</p>
+          </div>
+
+          <div id="search-progress" class="search-progress" hidden>
+            <div class="search-progress-head">
+              <p id="progress-label">Buscando…</p>
+              <span id="progress-detail">0/0</span>
+            </div>
+            <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
+            <p class="progress-sub" id="progress-sub"></p>
+          </div>
+
+          <div id="status-banner" class="banner" hidden></div>
+          <div class="results" id="results">
+            <div class="empty">
+              <div class="empty-icon" aria-hidden="true"><i class="fa-solid fa-location-crosshairs"></i></div>
+              <strong>Pronto para varrer o mapa</strong>
+              <p>Padaria em Americana já vem preenchida. Clique em Buscar leads para ranquear estabelecimentos sem vitrine digital.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-saved" hidden aria-label="Pipeline kanban">
+          <div class="results-head">
+            <p>Arraste os cards entre colunas ou use os botões. Cada lead tem mensagem personalizada.</p>
+            <button class="ghost" type="button" id="clear-saved">Limpar pipeline</button>
+          </div>
+          <div class="kanban" id="kanban-board"></div>
+        </section>
+
+        <section class="view" id="view-criteria" hidden aria-label="Critérios">
+          <article class="criteria-card">
+            <h2>Como o score é calculado</h2>
+            <p>
+              Cada estabelecimento recebe uma nota de 0 a 100. O alvo principal é o
+              negócio visível no mapa, com demanda comprovada e <em>sem vitrine digital</em>.
+            </p>
+            <ul class="criteria-list">
+              <li>
+                <span>01</span>
+                <div>
+                  <strong>Sem site</strong>
+                  <p>Quem não tem website próprio (ou só redes sociais) ganha o maior bônus. São os leads mais quentes para oferta de presença digital.</p>
+                </div>
+              </li>
+              <li>
+                <span>02</span>
+                <div>
+                  <strong>Estrelas</strong>
+                  <p>A média de 1 a 5 indica qualidade percebida. Notas altas com pouco digital são o melhor sinal de oportunidade.</p>
+                </div>
+              </li>
+              <li>
+                <span>03</span>
+                <div>
+                  <strong>Volume de avaliações</strong>
+                  <p>Muitas reviews mostram movimento real. Usamos uma curva logarítmica para não distorcer quem tem milhares de notas.</p>
+                </div>
+              </li>
+              <li>
+                <span>04</span>
+                <div>
+                  <strong>Lugar</strong>
+                  <p>Proximidade do ponto buscado (bairro, rua ou centro da cidade). Quanto mais perto do alvo, maior a pontuação.</p>
+                </div>
+              </li>
+              <li>
+                <span>05</span>
+                <div>
+                  <strong>Telefone</strong>
+                  <p>Contato direto acelera o outreach. Leads com telefone público recebem um incremento extra.</p>
+                </div>
+              </li>
+            </ul>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <aside class="drawer" id="drawer" hidden>
+      <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-head">
+          <div>
+            <p class="eyebrow" id="drawer-cat"></p>
+            <h2 id="drawer-title"></h2>
+          </div>
+          <button class="icon-close" id="drawer-close" type="button" aria-label="Fechar" onclick="NexoApp.closeDrawer()"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="drawer-score" id="drawer-score"></div>
+        <dl class="drawer-meta" id="drawer-meta"></dl>
+        <div class="breakdown" id="drawer-breakdown"></div>
+        <section class="outreach-box" id="drawer-outreach" hidden>
+          <p class="outreach-intro">Envie em três etapas: aborde, pergunte com quem falar e só então mande a proposta.</p>
+
+          <div class="outreach-block">
+            <div class="outreach-head">
+              <div>
+                <h3>1. Abordagem</h3>
+                <span class="outreach-tag">1–2 linhas · envie primeiro</span>
+              </div>
+              <button class="tiny" type="button" id="copy-approach">Copiar</button>
+            </div>
+            <textarea id="outreach-approach" class="outreach-text" rows="3" readonly></textarea>
+            <div class="outreach-actions" id="outreach-approach-actions"></div>
+          </div>
+
+          <div class="outreach-block">
+            <div class="outreach-head">
+              <div>
+                <h3>2. Pergunta</h3>
+                <span class="outreach-tag">1 linha · com quem falar</span>
+              </div>
+              <button class="tiny" type="button" id="copy-question">Copiar</button>
+            </div>
+            <textarea id="outreach-question" class="outreach-text" rows="2" readonly></textarea>
+            <div class="outreach-actions" id="outreach-question-actions"></div>
+          </div>
+
+          <div class="outreach-block">
+            <div class="outreach-head">
+              <div>
+                <h3>3. Proposta</h3>
+                <span class="outreach-tag">4–5 linhas · após o retorno</span>
+              </div>
+              <button class="tiny" type="button" id="copy-proposal">Copiar</button>
+            </div>
+            <textarea id="outreach-proposal" class="outreach-text" rows="6" readonly></textarea>
+            <div class="outreach-actions" id="outreach-proposal-actions"></div>
+          </div>
+        </section>
+        <div class="drawer-actions" id="drawer-actions"></div>
+      </div>
+    </aside>
+
+    <div class="modal" id="settings-modal" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="modal-head">
+          <h2 id="settings-title">Fonte de dados</h2>
+          <button class="icon-close" id="settings-close" type="button" aria-label="Fechar" onclick="NexoApp.closeSettings()"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <p class="hint">
+          Sem chave, o radar usa dados de demonstração e, se você escolher, o mapa aberto (OpenStreetMap).
+          Com a chave do Google Places, a busca replica o Maps: estrelas, avaliações e se o estabelecimento tem site.
+        </p>
+
+        <fieldset class="source-options">
+          <label class="radio">
+            <input type="radio" name="source" value="demo" />
+            <span>Demonstração — leads reais de exemplo, instantâneo</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="source" value="osm" />
+            <span>OpenStreetMap — busca ao vivo, sem estrelas do Google</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="source" value="google" checked />
+            <span>Google Places — dados ao vivo do Maps</span>
+          </label>
+        </fieldset>
+
+        <label class="field">
+          <span>Chave Google Places</span>
+          <input id="google-key" type="text" value="" placeholder="Cole sua chave AIza…" autocomplete="off" spellcheck="false" />
+        </label>
+        <details class="api-help">
+          <summary>Como pegar a chave do Google</summary>
+          <ol>
+            <li>Abra o <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> e crie um projeto.</li>
+            <li>Ative o <strong>faturamento</strong> (Billing). O Google exige cartão; há crédito grátis de teste.</li>
+            <li>Em <strong>APIs e serviços → Biblioteca</strong>, ative <strong>Maps JavaScript API</strong> e <strong>Places API</strong> (a clássica, não só a “New”).</li>
+            <li>Em <strong>Credenciais</strong>, clique em <strong>Criar credenciais → Chave de API</strong> e copie o valor (começa com <code>AIza</code>).</li>
+            <li>Cole a chave aqui, marque <strong>Google Places</strong> e salve. A chave fica só neste navegador.</li>
+          </ol>
+        </details>
+        <p class="fine">Restrinja a chave a essas duas APIs e ao seu domínio (ou localhost) para ninguém gastar o seu crédito.</p>
+        <button class="primary" type="button" id="save-settings">Salvar fonte</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/scoring.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/suggesters.js"></script>
+    <script src="js/messages.js"></script>
+    <script src="js/pipeline.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
