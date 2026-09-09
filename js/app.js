@@ -9,6 +9,7 @@ window.NexoApp = (() => {
     results: document.getElementById("results"),
     pagination: document.getElementById("pagination"),
     kanban: document.getElementById("kanban-board"),
+    insightsRoot: document.getElementById("insights-root"),
     savedCount: document.getElementById("saved-count"),
     meta: document.getElementById("results-meta"),
     banner: document.getElementById("status-banner"),
@@ -30,7 +31,7 @@ window.NexoApp = (() => {
   const titles = {
     search: "Radar de estabelecimentos",
     saved: "Pipeline de outreach",
-    criteria: "Critérios de avaliação",
+    insights: "Insights da sessão",
   };
 
   let currentLeads = [];
@@ -656,6 +657,7 @@ window.NexoApp = (() => {
     persistSaved();
     renderCurrent();
     renderKanban();
+    if (isInsightsVisible()) renderInsights();
   }
 
   function exportCsv() {
@@ -791,6 +793,220 @@ window.NexoApp = (() => {
     }
   }
 
+  function scoreBuckets(leads) {
+    const buckets = [
+      { id: "hot", label: "85+", tone: "hot", min: 85, max: 101, count: 0 },
+      { id: "high", label: "70–84", tone: "high", min: 70, max: 85, count: 0 },
+      { id: "mid", label: "55–69", tone: "mid", min: 55, max: 70, count: 0 },
+      { id: "low", label: "40–54", tone: "low", min: 40, max: 55, count: 0 },
+      { id: "cold", label: "<40", tone: "cold", min: 0, max: 40, count: 0 },
+    ];
+    for (const lead of leads) {
+      const s = Number(lead.score) || 0;
+      const bucket = buckets.find((b) => s >= b.min && s < b.max) || buckets[buckets.length - 1];
+      bucket.count += 1;
+    }
+    return buckets;
+  }
+
+  function nicheMix(leads) {
+    const map = new Map();
+    for (const lead of leads) {
+      const key = lead.category || "Outros";
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([label, count]) => ({ label, count }));
+  }
+
+  function renderInsights() {
+    const root = els.insightsRoot;
+    if (!root) return;
+    const leads = applyFilters(currentLeads);
+    const pipeCounts = NexoPipeline.columnCounts(saved);
+
+    if (!leads.length && !saved.length) {
+      root.innerHTML = `
+        <div class="insights-empty">
+          <div class="empty-icon" aria-hidden="true">
+            <i class="fa-solid fa-chart-column"></i>
+          </div>
+          <strong>Ainda sem dados na mira</strong>
+          <p>Faça uma busca no Radar para ver KPIs, leads quentes e o funil do pipeline em tempo real.</p>
+          <button class="primary" type="button" data-go-view="search">
+            <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
+            Ir para o Radar
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    const noSite = leads.filter((l) => !l.website).length;
+    const mobile = leads.filter((l) => NexoScoring.isMobilePhone(l.phone)).length;
+    const openNow = leads.filter((l) => l.hours?.openNow === true).length;
+    const avgScore = leads.length
+      ? Math.round(leads.reduce((sum, l) => sum + (Number(l.score) || 0), 0) / leads.length)
+      : 0;
+    const buckets = scoreBuckets(leads);
+    const maxBucket = Math.max(1, ...buckets.map((b) => b.count));
+    const niches = nicheMix(leads);
+    const hotLeads = [...leads]
+      .filter((l) => !l.website)
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 8);
+    const placeLabel = lastCityName || lastSearchPlace || "sua última busca";
+
+    root.innerHTML = `
+      <p class="insights-meta">
+        ${leads.length ? `${leads.length} lead${leads.length > 1 ? "s" : ""} filtrados · ${escapeHtml(placeLabel)}` : "Sem leads no Radar — mostrando só o pipeline"}
+      </p>
+
+      <div class="insights-kpis">
+        <div class="insight-kpi">
+          <span>Leads</span>
+          <strong>${leads.length}</strong>
+          <em>após filtros</em>
+        </div>
+        <div class="insight-kpi is-hot">
+          <span>Sem site</span>
+          <strong>${noSite}</strong>
+          <em>${leads.length ? Math.round((noSite / leads.length) * 100) : 0}% do total</em>
+        </div>
+        <div class="insight-kpi is-ok">
+          <span>WhatsApp</span>
+          <strong>${mobile}</strong>
+          <em>com celular</em>
+        </div>
+        <div class="insight-kpi">
+          <span>Abertos</span>
+          <strong>${openNow}</strong>
+          <em>agora</em>
+        </div>
+        <div class="insight-kpi">
+          <span>Score médio</span>
+          <strong>${avgScore || "—"}</strong>
+          <em>na mira</em>
+        </div>
+        <div class="insight-kpi">
+          <span>Pipeline</span>
+          <strong>${saved.length}</strong>
+          <em>salvos</em>
+        </div>
+      </div>
+
+      <div class="insights-actions">
+        <button class="primary" type="button" data-go-view="search">
+          <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
+          Voltar ao Radar
+        </button>
+        <button class="ghost" type="button" data-go-view="saved">
+          <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+          Abrir pipeline
+        </button>
+        <button class="ghost" type="button" id="insights-export" ${leads.length ? "" : "disabled"}>
+          <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+          Exportar CSV
+        </button>
+      </div>
+
+      <div class="insights-grid">
+        <article class="insight-panel">
+          <div class="insight-panel-head">
+            <h2>Distribuição de score</h2>
+            <p>cores = prioridade</p>
+          </div>
+          ${
+            leads.length
+              ? `<div class="score-bars">
+                  ${buckets
+                    .map(
+                      (b) => `
+                    <div class="score-bar-row">
+                      <span>${b.label}</span>
+                      <div class="score-bar-track">
+                        <div class="score-bar-fill score-${b.tone}" style="--w:${Math.round((b.count / maxBucket) * 100)}"></div>
+                      </div>
+                      <b>${b.count}</b>
+                    </div>`
+                    )
+                    .join("")}
+                </div>`
+              : `<p class="insights-meta">Busque no Radar para ver a distribuição.</p>`
+          }
+        </article>
+
+        <article class="insight-panel">
+          <div class="insight-panel-head">
+            <h2>Funil do pipeline</h2>
+            <p>${saved.length} salvos</p>
+          </div>
+          <div class="pipeline-funnel">
+            ${NexoPipeline.COLUMNS.map(
+              (col) => `
+              <div class="funnel-row">
+                <div>
+                  <strong>${escapeHtml(col.label)}</strong>
+                  <span>${escapeHtml(col.hint)}</span>
+                </div>
+                <b>${pipeCounts[col.id] || 0}</b>
+              </div>`
+            ).join("")}
+          </div>
+        </article>
+      </div>
+
+      <div class="insights-grid">
+        <article class="insight-panel">
+          <div class="insight-panel-head">
+            <h2>Leads quentes</h2>
+            <p>sem site · top score</p>
+          </div>
+          ${
+            hotLeads.length
+              ? `<div class="hot-list">
+                  ${hotLeads
+                    .map(
+                      (lead, i) => `
+                    <button class="hot-item" type="button" data-insight-lead="${escapeHtml(lead.id)}">
+                      <span class="hot-item-rank">${i + 1}</span>
+                      <span class="hot-item-body">
+                        <strong>${escapeHtml(lead.name)}</strong>
+                        <span>${escapeHtml(lead.category)} · ${formatStars(lead.rating)}</span>
+                      </span>
+                      <span class="lead-card-score score-${scoreTone(lead.score)}"><span>${lead.score}</span></span>
+                    </button>`
+                    )
+                    .join("")}
+                </div>`
+              : `<p class="insights-meta">${leads.length ? "Nenhum lead sem site com os filtros atuais." : "Sem leads na mira."}</p>`
+          }
+        </article>
+
+        <article class="insight-panel">
+          <div class="insight-panel-head">
+            <h2>Mix de nichos</h2>
+            <p>nesta busca</p>
+          </div>
+          ${
+            niches.length
+              ? `<div class="niche-mix">
+                  ${niches
+                    .map(
+                      (n) => `
+                    <span class="niche-pill">${escapeHtml(n.label)} <b>${n.count}</b></span>`
+                    )
+                    .join("")}
+                </div>`
+              : `<p class="insights-meta">Aparece após a primeira busca (ou busca em lote).</p>`
+          }
+        </article>
+      </div>
+    `;
+  }
+
   function switchView(name) {
     document.querySelectorAll(".view").forEach((view) => {
       const on = view.id === `view-${name}`;
@@ -802,9 +1018,15 @@ window.NexoApp = (() => {
     });
     els.viewTitle.textContent = titles[name];
     if (name === "saved") renderKanban();
+    if (name === "insights") renderInsights();
     if (isMobileLayout() && !document.getElementById("app").classList.contains("is-sidebar-collapsed")) {
       setSidebarCollapsed(true);
     }
+  }
+
+  function isInsightsVisible() {
+    const view = document.getElementById("view-insights");
+    return view && !view.hidden;
   }
 
   function isMobileLayout() {
@@ -951,6 +1173,22 @@ window.NexoApp = (() => {
     document.querySelectorAll(".nav-btn").forEach((btn) => {
       btn.addEventListener("click", () => switchView(btn.dataset.view));
     });
+    els.insightsRoot?.addEventListener("click", (event) => {
+      const go = event.target.closest("[data-go-view]");
+      if (go) {
+        switchView(go.dataset.goView);
+        return;
+      }
+      if (event.target.closest("#insights-export")) {
+        exportCsv();
+        return;
+      }
+      const hot = event.target.closest("[data-insight-lead]");
+      if (hot) {
+        const lead = findLead(hot.dataset.insightLead);
+        if (lead) openDrawer(lead);
+      }
+    });
     ["w-site", "w-stars", "w-reviews", "w-place", "w-phone"].forEach((id) => {
       document.getElementById(id).addEventListener("input", () => {
         syncWeightLabels();
@@ -992,6 +1230,7 @@ window.NexoApp = (() => {
       persistSaved();
       renderKanban();
       renderCurrent();
+      if (isInsightsVisible()) renderInsights();
     });
 
     els.results.addEventListener("click", onLeadClick);

@@ -8,12 +8,12 @@ window.NexoMessages = (() => {
     const n = Number(lead.reviews) || 0;
 
     if (r >= 4 && n >= 30) {
-      return `Oi, ${lead.name}! Vi vocês no Google,\nPosso te fazer uma pergunta rápida?`;
+      return `Bom dia, tudo bem? Vi vocês no Google,\nPosso te fazer uma pergunta rápida?`;
     }
     if (n >= 10) {
-      return `Oi, ${lead.name}! Achei a vocês no Maps e vi que vocês já têm movimento por aí.\nPosso te mandar uma dúvida de 10 segundos?`;
+      return `Bom dia, tudo bem? Achei a vocês no Maps e vi que vocês já têm movimento por aí.\nPosso te mandar uma dúvida de 10 segundos?`;
     }
-    return `Oi, ${lead.name}! Vi a vocês no Google Maps.\nPosso te fazer uma pergunta rapidinha?`;
+    return `Bom dia, tudo bem? Vi a vocês no Google Maps.\nPosso te fazer uma pergunta rapidinha?`;
   }
 
   function question(lead) {
@@ -29,7 +29,7 @@ window.NexoMessages = (() => {
 
   function proposal(lead) {
     const cat = lead.category.toLowerCase();
-    const lines = [`Obrigado pelo retorno, ${lead.name}!`];
+    const lines = [`Bom dia! Me chamo Lucas`];
 
     if (!lead.website) {
       lines.push(

@@ -59,9 +59,9 @@
             <span class="nav-label">Pipeline</span>
             <em id="saved-count">0</em>
           </button>
-          <button class="nav-btn" data-view="criteria" type="button" title="Critérios">
-            <i class="fa-solid fa-sliders nav-icon" aria-hidden="true"></i>
-            <span class="nav-label">Critérios</span>
+          <button class="nav-btn" data-view="insights" type="button" title="Insights">
+            <i class="fa-solid fa-chart-column nav-icon" aria-hidden="true"></i>
+            <span class="nav-label">Insights</span>
           </button>
         </nav>
 
@@ -305,51 +305,8 @@
           <div class="kanban" id="kanban-board"></div>
         </section>
 
-        <section class="view" id="view-criteria" hidden aria-label="Critérios">
-          <article class="criteria-card">
-            <h2>Como o score é calculado</h2>
-            <p>
-              Cada estabelecimento recebe uma nota de 0 a 100. O alvo principal é o
-              negócio visível no mapa, com demanda comprovada e <em>sem vitrine digital</em>.
-            </p>
-            <ul class="criteria-list">
-              <li>
-                <span>01</span>
-                <div>
-                  <strong>Sem site</strong>
-                  <p>Quem não tem website próprio (ou só redes sociais) ganha o maior bônus. São os leads mais quentes para oferta de presença digital.</p>
-                </div>
-              </li>
-              <li>
-                <span>02</span>
-                <div>
-                  <strong>Estrelas</strong>
-                  <p>A média de 1 a 5 indica qualidade percebida. Notas altas com pouco digital são o melhor sinal de oportunidade.</p>
-                </div>
-              </li>
-              <li>
-                <span>03</span>
-                <div>
-                  <strong>Volume de avaliações</strong>
-                  <p>Muitas reviews mostram movimento real. Usamos uma curva logarítmica para não distorcer quem tem milhares de notas.</p>
-                </div>
-              </li>
-              <li>
-                <span>04</span>
-                <div>
-                  <strong>Lugar</strong>
-                  <p>Proximidade do ponto buscado (bairro, rua ou centro da cidade). Quanto mais perto do alvo, maior a pontuação.</p>
-                </div>
-              </li>
-              <li>
-                <span>05</span>
-                <div>
-                  <strong>Telefone</strong>
-                  <p>Contato direto acelera o outreach. Leads com telefone público recebem um incremento extra.</p>
-                </div>
-              </li>
-            </ul>
-          </article>
+        <section class="view" id="view-insights" hidden aria-label="Insights">
+          <div id="insights-root" class="insights"></div>
         </section>
       </main>
     </div>
