@@ -37,6 +37,9 @@ window.NexoPipeline = (() => {
             .slice(0, 2)
             .map((c) => `<button class="tiny" type="button" data-kanban-move="${c.id}">→ ${c.label}</button>`)
             .join("")}
+          <button class="tiny tiny-danger" type="button" data-kanban-remove title="Remover do pipeline" aria-label="Remover do pipeline">
+            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+          </button>
         </div>
       </article>
     `;

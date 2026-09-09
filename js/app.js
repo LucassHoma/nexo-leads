@@ -1133,6 +1133,10 @@ window.NexoApp = (() => {
         setPipelineStatus(id, moveBtn.dataset.kanbanMove);
         return;
       }
+      if (event.target.closest("[data-kanban-remove]")) {
+        toggleSave(id);
+        return;
+      }
       if (event.target.closest("[data-kanban-open]")) {
         openDrawer(lead);
         return;
