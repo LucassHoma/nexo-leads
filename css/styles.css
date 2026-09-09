@@ -2292,6 +2292,27 @@ h1 {
   font-size: 0.75rem;
 }
 
+.kanban-phone {
+  margin: 0 0 10px !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text) !important;
+  font-size: 0.78rem !important;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.kanban-phone i {
+  color: var(--ok);
+  font-size: 0.7rem;
+}
+
+.kanban-phone.is-empty {
+  color: var(--faint) !important;
+  font-weight: 560;
+}
+
 .kanban-card-actions {
   display: flex;
   flex-wrap: wrap;

@@ -30,6 +30,11 @@ window.NexoPipeline = (() => {
         <p>${escapeHtml(lead.category)}${
           lead.hours?.summary ? ` · ${escapeHtml(lead.hours.summary)}` : ""
         }</p>
+        ${
+          lead.phone
+            ? `<p class="kanban-phone"><i class="fa-solid fa-phone" aria-hidden="true"></i> ${escapeHtml(lead.phone)}</p>`
+            : `<p class="kanban-phone is-empty">Sem telefone</p>`
+        }
         <div class="kanban-card-actions">
           <button class="tiny" type="button" data-kanban-open>Abrir</button>
           <button class="tiny" type="button" data-kanban-msg>Msg</button>
