@@ -2,10 +2,12 @@ window.NexoApp = (() => {
   const STORAGE_SAVED = "nexo-saved-leads";
   const STORAGE_SETTINGS = "nexo-settings";
   const STORAGE_SIDEBAR = "nexo-sidebar-collapsed";
+  const PAGE_SIZE = 50;
 
   const els = {
     form: document.getElementById("search-form"),
     results: document.getElementById("results"),
+    pagination: document.getElementById("pagination"),
     kanban: document.getElementById("kanban-board"),
     savedCount: document.getElementById("saved-count"),
     meta: document.getElementById("results-meta"),
@@ -39,6 +41,8 @@ window.NexoApp = (() => {
   let saved = loadSaved();
   let settings = loadSettings();
   let toastTimer = null;
+  let currentPage = 1;
+  let filteredLeads = [];
 
   function loadSaved() {
     try {
@@ -138,15 +142,32 @@ window.NexoApp = (() => {
     const hideSite = document.getElementById("f-hide-site").checked;
     const minStars = Number(document.getElementById("f-stars").value);
     const minReviews = Number(document.getElementById("f-reviews").value);
+    const openFilter = document.getElementById("f-open")?.value || "all";
     const sort = document.getElementById("f-sort").value;
 
     let list = leads.filter((lead) => {
       if (lead.phone && NexoScoring.isLandlinePhone(lead.phone)) return false;
       if (hideSite && lead.website) return false;
-      if (lead.rating != null && lead.rating < minStars) return false;
-      if (minStars > 0 && lead.rating == null && lead.source === "osm") return true;
-      if (lead.reviews != null && lead.reviews < minReviews) return false;
-      if (minReviews > 0 && lead.reviews == null && lead.source === "osm") return true;
+
+      if (minStars > 0) {
+        if (lead.rating == null) {
+          if (lead.source !== "osm") return false;
+        } else if (lead.rating < minStars) {
+          return false;
+        }
+      }
+
+      if (minReviews > 0) {
+        if (lead.reviews == null) {
+          if (lead.source !== "osm") return false;
+        } else if (lead.reviews < minReviews) {
+          return false;
+        }
+      }
+
+      if (openFilter === "open" && lead.hours?.openNow !== true) return false;
+      if (openFilter === "closed" && lead.hours?.openNow !== false) return false;
+
       return true;
     });
 
@@ -155,6 +176,12 @@ window.NexoApp = (() => {
       stars: (a, b) => (b.rating || 0) - (a.rating || 0),
       reviews: (a, b) => (b.reviews || 0) - (a.reviews || 0),
       distance: (a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99),
+      open: (a, b) => {
+        const ao = a.hours?.openNow === true ? 0 : a.hours?.openNow === false ? 2 : 1;
+        const bo = b.hours?.openNow === true ? 0 : b.hours?.openNow === false ? 2 : 1;
+        if (ao !== bo) return ao - bo;
+        return b.score - a.score;
+      },
     };
     list.sort(sorters[sort] || sorters.score);
     return list;
@@ -205,46 +232,234 @@ window.NexoApp = (() => {
     return `<span class="badge" title="${tip}"><i class="fa-regular fa-clock" aria-hidden="true"></i> ${escapeHtml(label)}</span>`;
   }
 
-  function card(lead) {
+  function categoryIcon(category) {
+    const c = String(category || "").toLowerCase();
+    if (c.includes("barbear")) return "fa-solid fa-scissors";
+    if (c.includes("restaur") || c.includes("pizza")) return "fa-solid fa-utensils";
+    if (c.includes("café") || c.includes("cafe")) return "fa-solid fa-mug-hot";
+    if (c.includes("salão") || c.includes("beleza") || c.includes("estética")) return "fa-solid fa-spa";
+    if (c.includes("academia") || c.includes("fitness")) return "fa-solid fa-dumbbell";
+    if (c.includes("oficina") || c.includes("mecân")) return "fa-solid fa-wrench";
+    if (c.includes("odonto") || c.includes("clínica") || c.includes("médic")) return "fa-solid fa-stethoscope";
+    if (c.includes("pet")) return "fa-solid fa-paw";
+    if (c.includes("farmac")) return "fa-solid fa-pills";
+    if (c.includes("imobili")) return "fa-solid fa-building";
+    if (c.includes("advog")) return "fa-solid fa-scale-balanced";
+    if (c.includes("mercado")) return "fa-solid fa-cart-shopping";
+    return "fa-solid fa-store";
+  }
+
+  function leadPhotoUrl(lead) {
+    if (lead.photoUrl) return lead.photoUrl;
+    return NexoSearch.buildPhotoUrl(lead.photoRef, settings.googleKey);
+  }
+
+  function scoreTone(score) {
+    const s = Number(score) || 0;
+    if (s >= 85) return "hot";
+    if (s >= 70) return "high";
+    if (s >= 55) return "mid";
+    if (s >= 40) return "low";
+    return "cold";
+  }
+
+  function leadMediaHtml(lead) {
+    const url = leadPhotoUrl(lead);
+    const icon = categoryIcon(lead.category);
+    const placeholder = `
+      <div class="lead-card-placeholder" aria-hidden="true">
+        <i class="${icon}"></i>
+        <span>${escapeHtml(lead.category)}</span>
+      </div>
+    `;
+    if (!url) return placeholder;
+    return `
+      ${placeholder}
+      <img
+        class="lead-card-img"
+        src="${escapeHtml(url)}"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        onerror="this.remove()"
+      />
+    `;
+  }
+
+  function card(lead, index = 0) {
     const dist = formatDistance(lead.distanceKm);
     const savedOn = isSaved(lead.id);
+    const hot = !lead.website;
+    const openFlag =
+      lead.hours?.openNow === true
+        ? '<span class="lead-card-flag open">Aberto</span>'
+        : hot
+          ? '<span class="lead-card-flag hot">Sem site</span>'
+          : "";
     return `
-      <article class="lead" data-id="${escapeHtml(lead.id)}" tabindex="0">
-        <div class="score-ring" style="--p:${lead.score}"><b>${lead.score}</b></div>
-        <div class="lead-body">
-          <h3>${escapeHtml(lead.name)}</h3>
-          <p>${escapeHtml(lead.address)}${dist ? ` · ${dist}` : ""}</p>
-          <div class="badges">
+      <article class="lead lead-card" data-id="${escapeHtml(lead.id)}" tabindex="0" style="--i:${index}">
+        <div class="lead-card-media">
+          ${leadMediaHtml(lead)}
+          <div class="lead-card-media-overlay"></div>
+          ${openFlag}
+          <div class="lead-card-score score-${scoreTone(lead.score)}" title="Score ${lead.score}">
+            <span>${lead.score}</span>
+          </div>
+          ${dist ? `<span class="lead-card-dist"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${dist}</span>` : ""}
+        </div>
+        <div class="lead-card-body">
+          <div class="lead-card-head">
+            <h3>${escapeHtml(lead.name)}</h3>
+            <p class="lead-card-rating">
+              <span class="stars">${formatStars(lead.rating)}</span>
+              <span class="lead-card-reviews">${formatReviews(lead.reviews)}</span>
+            </p>
+          </div>
+          <p class="lead-card-address">${escapeHtml(lead.address)}</p>
+          <div class="badges lead-card-badges">
             ${lead.website ? '<span class="badge">Tem site</span>' : '<span class="badge hot">Sem site</span>'}
             <span class="badge">${escapeHtml(lead.category)}</span>
-            ${NexoScoring.isMobilePhone(lead.phone) ? '<span class="badge ok">Celular</span>' : ""}
+            ${NexoScoring.isMobilePhone(lead.phone) ? '<span class="badge ok"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Celular</span>' : ""}
             ${hoursBadge(lead.hours)}
           </div>
-        </div>
-        <div class="lead-side">
-          <div class="stars">${formatStars(lead.rating)} <span>${formatReviews(lead.reviews)}</span></div>
-          <div class="lead-actions">
-            <button class="tiny ${savedOn ? "is-on" : ""}" data-act="save" type="button">${savedOn ? "No pipeline" : "Pipeline"}</button>
-            <a class="tiny" href="${escapeHtml(lead.mapsUrl)}" target="_blank" rel="noopener">Maps</a>
+          <div class="lead-card-foot">
+            <button class="tiny ${savedOn ? "is-on" : ""}" data-act="save" type="button">
+              <i class="fa-solid ${savedOn ? "fa-check" : "fa-plus"}" aria-hidden="true"></i>
+              ${savedOn ? "No pipeline" : "Pipeline"}
+            </button>
+            <a class="tiny" href="${escapeHtml(lead.mapsUrl)}" target="_blank" rel="noopener">
+              <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+              Maps
+            </a>
           </div>
         </div>
       </article>
     `;
   }
 
-  function renderList(target, leads, emptyText) {
-    if (!leads.length) {
-      target.innerHTML = `<div class="empty"><div class="empty-icon" aria-hidden="true"></div><strong>Nada por aqui</strong><p>${escapeHtml(emptyText)}</p></div>`;
-      return;
-    }
-    target.innerHTML = leads.map(card).join("");
+  function skeletonCards(count = 6) {
+    return Array.from({ length: count }, () => `<div class="lead-card lead-card--skeleton skeleton" aria-hidden="true"></div>`).join("");
   }
 
-  function resultsMeta(count) {
+  function paginateLeads(leads) {
+    const total = leads.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const endIdx = Math.min(startIdx + PAGE_SIZE, total);
+    return {
+      total,
+      totalPages,
+      startIdx,
+      endIdx,
+      page: leads.slice(startIdx, endIdx),
+    };
+  }
+
+  function paginationPages(totalPages, page) {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = new Set([1, totalPages, page, page - 1, page + 1]);
+    const list = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      if (i > 0 && list[i] - list[i - 1] > 1) out.push("…");
+      out.push(list[i]);
+    }
+    return out;
+  }
+
+  function renderPagination(pag) {
+    if (!els.pagination) return;
+    if (!pag || pag.total <= PAGE_SIZE) {
+      els.pagination.hidden = true;
+      els.pagination.innerHTML = "";
+      return;
+    }
+    els.pagination.hidden = false;
+    const pages = paginationPages(pag.totalPages, currentPage);
+    els.pagination.innerHTML = `
+      <button class="pagination-btn" type="button" data-page="prev" ${currentPage <= 1 ? "disabled" : ""}>
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+        Anterior
+      </button>
+      <div class="pagination-center">
+        <span class="pagination-range">Mostrando ${pag.startIdx + 1}–${pag.endIdx} de ${pag.total}</span>
+        <div class="pagination-pages" role="group" aria-label="Páginas">
+          ${pages
+            .map((p) =>
+              p === "…"
+                ? `<span class="pagination-ellipsis">…</span>`
+                : `<button class="pagination-page ${p === currentPage ? "is-active" : ""}" type="button" data-page="${p}">${p}</button>`
+            )
+            .join("")}
+        </div>
+      </div>
+      <button class="pagination-btn" type="button" data-page="next" ${currentPage >= pag.totalPages ? "disabled" : ""}>
+        Próxima
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </button>
+    `;
+  }
+
+  function emptyStateHtml(title, text) {
+    return `
+      <div class="empty">
+        <div class="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2" opacity="0.35" />
+            <circle cx="20" cy="20" r="12" stroke="currentColor" stroke-width="2.2" />
+            <circle cx="20" cy="20" r="6" stroke="currentColor" stroke-width="2.2" />
+            <circle cx="20" cy="20" r="2.4" fill="currentColor" />
+          </svg>
+        </div>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(text)}</p>
+      </div>
+    `;
+  }
+
+  function renderList(target, leads, emptyText) {
+    filteredLeads = leads;
+    if (!leads.length) {
+      target.innerHTML = emptyStateHtml("Nada por aqui", emptyText);
+      renderPagination(null);
+      return;
+    }
+    const pag = paginateLeads(leads);
+    target.innerHTML = pag.page.map((lead, i) => card(lead, i)).join("");
+    renderPagination(pag);
+  }
+
+  function goToPage(page) {
+    if (page === "prev") currentPage -= 1;
+    else if (page === "next") currentPage += 1;
+    else currentPage = Number(page);
+    renderList(els.results, filteredLeads, "Ajuste nicho, lugar ou filtros.");
+    els.meta.textContent = resultsMeta(filteredLeads);
+    const scrollBtn = document.getElementById("scroll-top-btn");
+    if (scrollBtn) scrollBtn.hidden = filteredLeads.length < 6;
+    document.querySelector(".results-head")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resultsMeta(leads) {
+    const count = leads.length;
     if (!count) return "Defina nicho e lugar para varrer o mapa.";
     const city = lastCityName ? ` em ${lastCityName}` : "";
     const batch = lastBatchCount > 1 ? ` · ${lastBatchCount} nichos` : "";
-    return `${count} lead${count > 1 ? "s" : ""} ranqueados${city}${batch}.`;
+    const open = leads.filter((l) => l.hours?.openNow === true).length;
+    const closed = leads.filter((l) => l.hours?.openNow === false).length;
+    const noSite = leads.filter((l) => !l.website).length;
+    const bits = [`${count} lead${count > 1 ? "s" : ""}`, city.trim(), batch.trim()].filter(Boolean);
+    let line = bits.join(" ").replace(/\s+/g, " ").trim();
+    if (!line.endsWith(".")) line += ".";
+    const extras = [];
+    if (noSite) extras.push(`${noSite} sem site`);
+    if (open) extras.push(`${open} aberto${open > 1 ? "s" : ""}`);
+    if (closed) extras.push(`${closed} fechado${closed > 1 ? "s" : ""}`);
+    if (extras.length) line += ` · ${extras.join(" · ")}`;
+    return line;
   }
 
   function parseNiches() {
@@ -275,15 +490,39 @@ window.NexoApp = (() => {
     els.progressSub.textContent = data.detailName || "";
   }
 
-  function renderCurrent() {
+  function renderCurrent(resetPage = false) {
+    if (resetPage) currentPage = 1;
     const visible = applyFilters(currentLeads);
     renderList(
       els.results,
       visible,
-      "Ajuste nicho, lugar ou filtros. No modo demo, tente padaria em São Paulo."
+      "Ajuste nicho, lugar ou filtros. No modo demo, tente barbearia em São Paulo."
     );
     els.exportBtn.disabled = visible.length === 0;
-    els.meta.textContent = resultsMeta(visible.length);
+    els.meta.textContent = resultsMeta(visible);
+    const scrollBtn = document.getElementById("scroll-top-btn");
+    if (scrollBtn) scrollBtn.hidden = visible.length < 6;
+  }
+
+  function resetFilters() {
+    document.getElementById("f-nosite").checked = true;
+    document.getElementById("f-hide-site").checked = true;
+    document.getElementById("f-open").value = "all";
+    document.getElementById("f-stars").value = "4";
+    document.getElementById("f-reviews").value = "30";
+    document.getElementById("f-sort").value = "score";
+    document.getElementById("f-batch").checked = false;
+    syncBatchUi();
+    if (currentLeads.length) {
+      lastCtx = {
+        ...(lastCtx || {}),
+        weights: weights(),
+        prioritizeNoSite: true,
+      };
+      currentLeads = NexoScoring.rank(currentLeads, lastCtx);
+    }
+    renderCurrent(true);
+    toast("Filtros restaurados");
   }
 
   function renderKanban() {
@@ -325,6 +564,7 @@ window.NexoApp = (() => {
     document.getElementById("drawer-cat").textContent = lead.category;
     document.getElementById("drawer-title").textContent = lead.name;
     document.getElementById("drawer-score").textContent = `${lead.score} pts`;
+    document.getElementById("drawer-score").className = `drawer-score score-${scoreTone(lead.score)}`;
     document.getElementById("drawer-meta").innerHTML = `
       <div><dt>Endereço</dt><dd>${escapeHtml(lead.address)}</dd></div>
       <div><dt>Estrelas</dt><dd>${formatStars(lead.rating)}</dd></div>
@@ -490,7 +730,8 @@ window.NexoApp = (() => {
     lastSearchPlace = place;
 
     setSearchLoading(true);
-    els.results.innerHTML = `<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`;
+    currentPage = 1;
+    els.results.innerHTML = skeletonCards(8);
     showBanner("", false);
     setProgress({ phase: "start", current: 0, total: 1, label: "Iniciando busca…" });
 
@@ -537,7 +778,9 @@ window.NexoApp = (() => {
       els.sourcePill.textContent = payload.sourceLabel;
       NexoSuggesters.rememberSearch(niches.join(", "), place);
       renderCurrent();
+      document.querySelector(".main")?.scrollTo({ top: 0, behavior: "smooth" });
       if (!currentLeads.length) toast("Nenhum estabelecimento encontrado nesse recorte.");
+      else toast(`${applyFilters(currentLeads).length} leads na mira`);
     } catch (err) {
       currentLeads = [];
       renderCurrent();
@@ -613,8 +856,8 @@ window.NexoApp = (() => {
       ? "— selecione abaixo ou separe por vírgula"
       : "";
     document.getElementById("q-niche").placeholder = on
-      ? "Ex.: Padaria, Barbearia, Restaurante"
-      : "Ex.: padaria, clínica, oficina";
+      ? "Ex.: Barbearia, Restaurante, Academia"
+      : "Ex.: barbearia, clínica, oficina";
 
     if (on) {
       document.querySelectorAll("#niche-chips .chip.is-active").forEach((el) => el.classList.remove("is-active"));
@@ -681,11 +924,15 @@ window.NexoApp = (() => {
 
   function bind() {
     els.form.addEventListener("submit", runSearch);
+    document.getElementById("reset-filters")?.addEventListener("click", resetFilters);
+    document.getElementById("scroll-top-btn")?.addEventListener("click", () => {
+      document.querySelector(".main")?.scrollTo({ top: 0, behavior: "smooth" });
+    });
     document.getElementById("niche-chips").addEventListener("click", (event) => {
       const chip = event.target.closest("[data-niche]");
       if (!chip) return;
       document.getElementById("q-niche").value = chip.dataset.niche;
-      document.querySelectorAll(".chip").forEach((el) => el.classList.toggle("is-active", el === chip));
+      document.querySelectorAll("#niche-chips .chip").forEach((el) => el.classList.toggle("is-active", el === chip));
     });
     document.getElementById("q-niche").addEventListener("input", () => {
       const value = NexoData.normalize(document.getElementById("q-niche").value);
@@ -720,8 +967,8 @@ window.NexoApp = (() => {
         }
       });
     });
-    ["f-hide-site", "f-stars", "f-reviews", "f-sort"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", renderCurrent);
+    ["f-hide-site", "f-stars", "f-reviews", "f-sort", "f-open"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", () => renderCurrent(true));
     });
     document.getElementById("f-nosite").addEventListener("change", () => {
       if (!currentLeads.length) return;
@@ -731,7 +978,13 @@ window.NexoApp = (() => {
         prioritizeNoSite: document.getElementById("f-nosite").checked,
       };
       currentLeads = NexoScoring.rank(currentLeads, lastCtx);
-      renderCurrent();
+      renderCurrent(true);
+    });
+    els.pagination?.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-page]");
+      if (!btn || btn.disabled) return;
+      event.preventDefault();
+      goToPage(btn.dataset.page);
     });
     els.exportBtn.addEventListener("click", exportCsv);
     document.getElementById("clear-saved").addEventListener("click", () => {
@@ -842,7 +1095,7 @@ window.NexoApp = (() => {
     settings = loadSettings();
     els.sourcePill.textContent = sourceLabel();
     document.querySelectorAll(".chip").forEach((el) => {
-      el.classList.toggle("is-active", NexoData.normalize(el.dataset.niche) === NexoData.normalize("Padaria"));
+      el.classList.toggle("is-active", NexoData.normalize(el.dataset.niche) === NexoData.normalize("Barbearia"));
     });
     renderKanban();
     NexoSuggesters.init();

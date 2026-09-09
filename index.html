@@ -20,7 +20,8 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23080809' width='32' height='32'/><rect fill='%23ff0000' x='6' y='6' width='8' height='20'/></svg>" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23080809'/%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23ff0000' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%23ff0000' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ff0000'/%3E%3C/svg%3E" />
+    <meta name="theme-color" content="#070708" />
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
@@ -30,10 +31,17 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-top">
           <div class="brand">
-            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2" opacity="0.35" />
+                <circle cx="20" cy="20" r="12" stroke="currentColor" stroke-width="2.2" />
+                <circle cx="20" cy="20" r="6" stroke="currentColor" stroke-width="2.2" />
+                <circle cx="20" cy="20" r="2.4" fill="currentColor" />
+              </svg>
+            </span>
             <div class="brand-copy">
               <strong>NEXO</strong>
-              <span>Buscador de leads</span>
+              <span>Mira no lead certo</span>
             </div>
           </div>
           <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Recolher menu" aria-controls="sidebar" aria-expanded="true">
@@ -97,6 +105,10 @@
             <p class="eyebrow">Prospecção local</p>
             <h1 id="view-title">Radar de estabelecimentos</h1>
           </div>
+          <button class="ghost topbar-clear" id="reset-filters" type="button" title="Restaurar filtros padrão">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+            Resetar filtros
+          </button>
         </header>
 
         <section class="view is-visible" id="view-search" aria-label="Busca">
@@ -107,8 +119,8 @@
                 <input
                   id="q-niche"
                   name="niche"
-                  placeholder="Ex.: padaria, clínica, oficina"
-                  value="Padaria"
+                  placeholder="Ex.: barbearia, clínica, oficina"
+                  value="Barbearia"
                   required
                 />
               </label>
@@ -144,12 +156,18 @@
               <div id="batch-chips-wrap" hidden>
                 <p class="chips-label">Selecione vários nichos</p>
                 <div class="batch-picks" id="batch-picks">
-                  <button class="chip chip-sm" type="button" data-batch-niche="Padaria">Padaria</button>
                   <button class="chip chip-sm" type="button" data-batch-niche="Barbearia">Barbearia</button>
                   <button class="chip chip-sm" type="button" data-batch-niche="Restaurante">Restaurante</button>
                   <button class="chip chip-sm" type="button" data-batch-niche="Cafeteria">Cafeteria</button>
-                  <button class="chip chip-sm" type="button" data-batch-niche="Clínica odontológica">Odonto</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Salão de beleza">Salão</button>
                   <button class="chip chip-sm" type="button" data-batch-niche="Academia">Academia</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Oficina mecânica">Oficina</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Clínica odontológica">Odonto</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Clínica médica">Clínica</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Pet shop">Pet shop</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Farmácia">Farmácia</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Imobiliária">Imobiliária</button>
+                  <button class="chip chip-sm" type="button" data-batch-niche="Advocacia">Advocacia</button>
                 </div>
               </div>
             </div>
@@ -157,12 +175,22 @@
             <div id="single-chips-wrap">
               <p class="chips-label">Nicho rápido</p>
               <div class="niche-chips" id="niche-chips" aria-label="Nichos rápidos">
-                <button class="chip" type="button" data-niche="Padaria">Padaria</button>
                 <button class="chip" type="button" data-niche="Barbearia">Barbearia</button>
                 <button class="chip" type="button" data-niche="Restaurante">Restaurante</button>
-                <button class="chip" type="button" data-niche="Clínica odontológica">Odonto</button>
-                <button class="chip" type="button" data-niche="Oficina mecânica">Oficina</button>
+                <button class="chip" type="button" data-niche="Cafeteria">Cafeteria</button>
+                <button class="chip" type="button" data-niche="Salão de beleza">Salão</button>
                 <button class="chip" type="button" data-niche="Academia">Academia</button>
+                <button class="chip" type="button" data-niche="Oficina mecânica">Oficina</button>
+                <button class="chip" type="button" data-niche="Clínica odontológica">Odonto</button>
+                <button class="chip" type="button" data-niche="Clínica médica">Clínica</button>
+                <button class="chip" type="button" data-niche="Pet shop">Pet shop</button>
+                <button class="chip" type="button" data-niche="Farmácia">Farmácia</button>
+                <button class="chip" type="button" data-niche="Imobiliária">Imobiliária</button>
+                <button class="chip" type="button" data-niche="Advocacia">Advocacia</button>
+                <button class="chip" type="button" data-niche="Mercado">Mercado</button>
+                <button class="chip" type="button" data-niche="Pizzaria">Pizzaria</button>
+                <button class="chip" type="button" data-niche="Estética">Estética</button>
+                <button class="chip" type="button" data-niche="Lavanderia">Lavanderia</button>
               </div>
             </div>
 
@@ -176,6 +204,14 @@
                 <label class="check">
                   <input id="f-hide-site" type="checkbox" checked />
                   <span>Ocultar quem já tem site</span>
+                </label>
+                <label class="mini">
+                  Horário
+                  <select id="f-open">
+                    <option value="all" selected>Qualquer</option>
+                    <option value="open">Abertos agora</option>
+                    <option value="closed">Fechados agora</option>
+                  </select>
                 </label>
                 <label class="mini">
                   Mín. estrelas
@@ -201,6 +237,7 @@
                   Ordenar
                   <select id="f-sort">
                     <option value="score">Maior score</option>
+                    <option value="open">Abertos primeiro</option>
                     <option value="stars">Mais estrelas</option>
                     <option value="reviews">Mais avaliações</option>
                     <option value="distance">Mais perto</option>
@@ -224,6 +261,12 @@
 
           <div class="results-head">
             <p id="results-meta">Defina nicho e lugar para varrer o mapa.</p>
+            <div class="results-head-actions">
+              <button class="ghost" type="button" id="scroll-top-btn" hidden>
+                <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                Topo
+              </button>
+            </div>
           </div>
 
           <div id="search-progress" class="search-progress" hidden>
@@ -236,13 +279,22 @@
           </div>
 
           <div id="status-banner" class="banner" hidden></div>
-          <div class="results" id="results">
+          <div class="results results-grid" id="results">
             <div class="empty">
-              <div class="empty-icon" aria-hidden="true"><i class="fa-solid fa-location-crosshairs"></i></div>
-              <strong>Pronto para varrer o mapa</strong>
-              <p>Padaria em Americana já vem preenchida. Clique em Buscar leads para ranquear estabelecimentos sem vitrine digital.</p>
+              <div class="empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2" opacity="0.35" />
+                  <circle cx="20" cy="20" r="12" stroke="currentColor" stroke-width="2.2" />
+                  <circle cx="20" cy="20" r="6" stroke="currentColor" stroke-width="2.2" />
+                  <circle cx="20" cy="20" r="2.4" fill="currentColor" />
+                </svg>
+              </div>
+              <strong>Pronto para mirar no mapa</strong>
+              <p>Barbearia em Americana já vem preenchida. Clique em Buscar leads para ranquear estabelecimentos sem vitrine digital.</p>
             </div>
           </div>
+
+          <nav class="pagination" id="pagination" hidden aria-label="Paginação de leads"></nav>
         </section>
 
         <section class="view" id="view-saved" hidden aria-label="Pipeline kanban">

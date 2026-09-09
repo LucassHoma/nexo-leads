@@ -1,10 +1,11 @@
 window.NexoData = (() => {
   const categories = [
-    { label: "Padaria", keys: ["padaria", "bakery", "confeitaria"] },
     { label: "Restaurante", keys: ["restaurante", "restaurant"] },
     { label: "Cafeteria", keys: ["cafeteria", "café", "cafe"] },
+    { label: "Pizzaria", keys: ["pizzaria", "pizza"] },
     { label: "Barbearia", keys: ["barbearia", "barber", "cabelo"] },
     { label: "Salão de beleza", keys: ["salao", "salão", "beleza", "beauty"] },
+    { label: "Estética", keys: ["estetica", "estética", "spa"] },
     { label: "Academia", keys: ["academia", "gym", "fitness"] },
     { label: "Oficina mecânica", keys: ["oficina", "mecanica", "mecânica", "auto"] },
     { label: "Clínica odontológica", keys: ["odonto", "dentista", "dental"] },
@@ -14,6 +15,8 @@ window.NexoData = (() => {
     { label: "Imobiliária", keys: ["imobili"] },
     { label: "Advocacia", keys: ["advog", "advoc"] },
     { label: "Mercado", keys: ["mercado", "mercadinho", "supermercado"] },
+    { label: "Lavanderia", keys: ["lavanderia", "laundry"] },
+    { label: "Padaria", keys: ["padaria", "bakery", "confeitaria"] },
   ];
 
   const leads = [
@@ -465,8 +468,10 @@ window.NexoData = (() => {
     padaria: ['["shop"="bakery"]', '["shop"="pastry"]'],
     restaurante: ['["amenity"="restaurant"]'],
     cafeteria: ['["amenity"="cafe"]'],
+    pizzaria: ['["amenity"="restaurant"]["cuisine"="pizza"]', '["amenity"="fast_food"]["cuisine"="pizza"]'],
     barbearia: ['["shop"="hairdresser"]', '["craft"="barber"]'],
     salao: ['["shop"="beauty"]', '["shop"="hairdresser"]'],
+    estetica: ['["shop"="beauty"]', '["leisure"="spa"]'],
     academia: ['["leisure"="fitness_centre"]', '["leisure"="sports_centre"]'],
     oficina: ['["shop"="car_repair"]'],
     odonto: ['["amenity"="dentist"]'],
@@ -476,14 +481,17 @@ window.NexoData = (() => {
     imobili: ['["office"="estate_agent"]'],
     advoc: ['["office"="lawyer"]'],
     mercado: ['["shop"="convenience"]', '["shop"="supermarket"]'],
+    lavanderia: ['["shop"="laundry"]', '["shop"="dry_cleaning"]'],
   };
 
   const googleTypes = {
     padaria: "bakery",
     restaurante: "restaurant",
     cafeteria: "cafe",
+    pizzaria: "meal_takeaway",
     barbearia: "hair_care",
     salao: "beauty_salon",
+    estetica: "spa",
     academia: "gym",
     oficina: "car_repair",
     odonto: "dentist",
@@ -493,6 +501,7 @@ window.NexoData = (() => {
     imobili: "real_estate_agency",
     advoc: "lawyer",
     mercado: "supermarket",
+    lavanderia: "laundry",
   };
 
   function normalize(text) {
@@ -522,11 +531,16 @@ window.NexoData = (() => {
       if (key.includes("imobili")) return "imobili";
       if (key.includes("advog")) return "advoc";
       if (key.includes("mercado")) return "mercado";
+      if (key.includes("pizza")) return "pizzaria";
+      if (key.includes("estetic") || key.includes("spa")) return "estetica";
+      if (key.includes("lavander") || key.includes("laundry")) return "lavanderia";
     }
     if (n.includes("pada") || n.includes("baker")) return "padaria";
+    if (n.includes("pizza")) return "pizzaria";
     if (n.includes("restau")) return "restaurante";
     if (n.includes("cafe")) return "cafeteria";
     if (n.includes("barbe") || n.includes("cabel")) return "barbearia";
+    if (n.includes("estetic") || n.includes("spa")) return "estetica";
     if (n.includes("salao") || n.includes("belez")) return "salao";
     if (n.includes("academ") || n.includes("gym")) return "academia";
     if (n.includes("ofici") || n.includes("mecan")) return "oficina";
@@ -536,6 +550,7 @@ window.NexoData = (() => {
     if (n.includes("farmac")) return "farmacia";
     if (n.includes("imob")) return "imobili";
     if (n.includes("advog")) return "advoc";
+    if (n.includes("lavander") || n.includes("lavagem")) return "lavanderia";
     if (n.includes("mercad")) return "mercado";
     return "restaurante";
   }

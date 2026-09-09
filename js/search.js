@@ -52,6 +52,27 @@ window.NexoSearch = (() => {
     return match ? formatClock(match.close.time) : null;
   }
 
+  function attachPhoto(place, maxWidth = 640) {
+    const photo = place?.photos?.[0];
+    if (!photo) return { photoUrl: null, photoRef: null };
+    try {
+      if (typeof photo.getUrl === "function") {
+        return { photoUrl: photo.getUrl({ maxWidth }), photoRef: null };
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    if (photo.photo_reference) {
+      return { photoUrl: null, photoRef: photo.photo_reference };
+    }
+    return { photoUrl: null, photoRef: null };
+  }
+
+  function buildPhotoUrl(photoRef, apiKey, maxWidth = 640) {
+    if (!photoRef || !apiKey) return null;
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoRef)}&key=${encodeURIComponent(apiKey)}`;
+  }
+
   function normalizeHours(openingHours, osmHours) {
     if (openingHours && (openingHours.weekday_text?.length || openingHours.periods)) {
       const weekdayText = openingHours.weekday_text || [];
@@ -269,6 +290,7 @@ window.NexoSearch = (() => {
         const leads = (results || []).map((place) => {
           const loc = place.geometry?.location;
           const coords = loc ? { lat: loc.lat(), lng: loc.lng() } : null;
+          const photo = attachPhoto(place);
           return {
             id: place.place_id,
             name: place.name,
@@ -285,6 +307,8 @@ window.NexoSearch = (() => {
             hasWebsiteUnknown: !("website" in place),
             source: "google",
             placeId: place.place_id,
+            photoUrl: photo.photoUrl,
+            photoRef: photo.photoRef,
           };
         });
         resolve(leads);
@@ -307,6 +331,7 @@ window.NexoSearch = (() => {
             "user_ratings_total",
             "formatted_address",
             "opening_hours",
+            "photos",
           ],
         },
         (place, status) => {
@@ -314,6 +339,7 @@ window.NexoSearch = (() => {
             resolve({});
             return;
           }
+          const photo = attachPhoto(place);
           resolve({
             website: place.website || "",
             phone: place.formatted_phone_number || "",
@@ -322,6 +348,8 @@ window.NexoSearch = (() => {
             reviews: place.user_ratings_total,
             address: place.formatted_address,
             hours: normalizeHours(place.opening_hours, ""),
+            photoUrl: photo.photoUrl,
+            photoRef: photo.photoRef,
           });
         }
       );
@@ -359,6 +387,8 @@ window.NexoSearch = (() => {
         reviews: extra.reviews ?? lead.reviews,
         address: extra.address || lead.address,
         hours: extra.hours || lead.hours || null,
+        photoUrl: extra.photoUrl || lead.photoUrl || null,
+        photoRef: extra.photoRef || lead.photoRef || null,
         hasWebsiteUnknown: false,
       });
       await sleep(120);
@@ -424,6 +454,53 @@ window.NexoSearch = (() => {
     return { origin, leads: merged, sourceLabel: labels[source] || source, batchCount: list.length };
   }
 
+  function demoPhotoUrl(lead) {
+    const c = NexoData.normalize(lead.category || "");
+    const pool = {
+      barbearia: [
+        "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=640&h=400&q=80",
+        "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=640&h=400&q=80",
+        "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      restaurante: [
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&h=400&q=80",
+        "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      cafeteria: [
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      pizzaria: [
+        "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      academia: [
+        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      padaria: [
+        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      pet: [
+        "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+      default: [
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=640&h=400&q=80",
+        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=640&h=400&q=80",
+      ],
+    };
+    let key = "default";
+    if (c.includes("barbear")) key = "barbearia";
+    else if (c.includes("restaur")) key = "restaurante";
+    else if (c.includes("cafeter") || c.includes("cafe")) key = "cafeteria";
+    else if (c.includes("pizza")) key = "pizzaria";
+    else if (c.includes("academia")) key = "academia";
+    else if (c.includes("padaria")) key = "padaria";
+    else if (c.includes("pet")) key = "pet";
+    const list = pool[key] || pool.default;
+    const seed = String(lead.id || lead.name || "x")
+      .split("")
+      .reduce((a, ch) => a + ch.charCodeAt(0), 0);
+    return list[seed % list.length];
+  }
+
   async function searchDemo({ niche, place }) {
     await sleep(480);
     const originMap = {
@@ -449,10 +526,23 @@ window.NexoSearch = (() => {
     if (!leads.length) leads = NexoData.searchDemo(niche, "");
     return {
       origin,
-      leads: leads.map((l) => ({ ...l, source: "demo" })),
+      leads: leads.map((l) => ({
+        ...l,
+        source: "demo",
+        photoUrl: l.photoUrl || demoPhotoUrl(l),
+      })),
       sourceLabel: "Demonstração",
     };
   }
 
-  return { geocode, resolveCity, searchOsm, searchGoogle, searchDemo, searchBatch, loadGoogle };
+  return {
+    geocode,
+    resolveCity,
+    searchOsm,
+    searchGoogle,
+    searchDemo,
+    searchBatch,
+    loadGoogle,
+    buildPhotoUrl,
+  };
 })();

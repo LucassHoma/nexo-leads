@@ -19,7 +19,7 @@ window.NexoMessages = (() => {
   function question(lead) {
     const who = firstName(lead.name);
     const variants = [
-      `Perfeito! eu posso falar com o responsavel da ${lead.name}?`,
+      `Perfeito! Posso falar com o responsável da ${lead.name}?`,
       `Show! Quem cuida disso aí? Com quem eu posso falar sobre o digital da ${who}?`,
       `Combinado. Com quem eu falo pra tratar de site e Google da ${lead.name}?`,
     ];
